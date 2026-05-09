@@ -68,8 +68,16 @@ export async function handleWebSocketConnection(
     }
   };
 
+  // Heartbeat to prevent fly.io proxy from dropping idle connections
+  const heartbeat = setInterval(() => {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "ping" }));
+    }
+  }, 30_000);
+
   // Handle client disconnect
   socket.onclose = () => {
+    clearInterval(heartbeat);
     console.log(`🔌 Client disconnected: ${clientId}`);
     roomManager.removeClientFromRoom(roomId, clientId);
 
