@@ -1,0 +1,13 @@
+{
+  "tasks": {
+    "dev": "deno run --allow-net --allow-read --allow-env --watch main.ts",
+    "start": "deno run --allow-net --allow-read --allow-env main.ts",
+    "test": "deno test --allow-net --allow-read --allow-env"
+  },
+  "imports": {
+    "std/": "https://deno.land/std@0.218.0/"
+  },
+  "compilerOptions": {
+    "lib": ["deno.window", "dom"]
+  }
+}
