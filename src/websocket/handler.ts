@@ -9,11 +9,9 @@ export async function handleWebSocketConnection(
   const clientId = generateId();
   console.log(`🔌 New WebSocket connection: ${clientId} for room ${roomId}`);
 
-  // Verify room exists and add client
+  // Auto-create room if it doesn't exist (handles reconnects and multi-machine routing)
   if (!roomManager.getRoom(roomId)) {
-    console.log(`❌ Room not found: ${roomId}`);
-    socket.close(1008, "Room not found");
-    return;
+    roomManager.createRoomWithId(roomId);
   }
 
   const client: ClientSession = {

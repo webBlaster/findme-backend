@@ -19,6 +19,16 @@ class RoomManager {
     return roomId;
   }
 
+  createRoomWithId(roomId: string): void {
+    const room: Room = {
+      id: roomId,
+      createdAt: new Date(),
+      clients: new Map(),
+    };
+    this.rooms.set(roomId, room);
+    console.log(`✅ Room restored: ${roomId}`);
+  }
+
   /**
    * Get a room by ID
    */
