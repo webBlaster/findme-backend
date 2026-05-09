@@ -1,10 +1,17 @@
 import { roomManager } from "./services/roomManager.ts";
 import { handleWebSocketConnection } from "./websocket/handler.ts";
 
-interface RouteMatch {
-  method: string;
-  path: string;
-  match: RegExpMatchArray | null;
+const CORS_HEADERS: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+  });
 }
 
 export async function handleRequest(request: Request): Promise<Response> {
@@ -12,12 +19,14 @@ export async function handleRequest(request: Request): Promise<Response> {
   const pathname = url.pathname;
   const method = request.method;
 
+  // CORS preflight
+  if (method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
+
   // Health check
   if (pathname === "/health" && method === "GET") {
-    return new Response(
-      JSON.stringify({ status: "ok", timestamp: new Date().toISOString() }),
-      { headers: { "Content-Type": "application/json" } },
-    );
+    return json({ status: "ok", timestamp: new Date().toISOString() });
   }
 
   // Create a new room
@@ -26,25 +35,13 @@ export async function handleRequest(request: Request): Promise<Response> {
     const host = url.host;
     const protocol = url.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${host}/ws/${roomId}`;
-    return new Response(
-      JSON.stringify({
-        roomId,
-        wsUrl,
-        timestamp: new Date().toISOString(),
-      }),
-      {
-        status: 201,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
+    return json({ roomId, wsUrl, timestamp: new Date().toISOString() }, 201);
   }
 
   // Get all rooms
   if (pathname === "/api/rooms" && method === "GET") {
     const rooms = roomManager.getAllRooms();
-    return new Response(JSON.stringify({ rooms, count: rooms.length }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    return json({ rooms, count: rooms.length });
   }
 
   // Get room stats
@@ -54,15 +51,10 @@ export async function handleRequest(request: Request): Promise<Response> {
     const stats = roomManager.getRoomStats(roomId);
 
     if (!stats) {
-      return new Response(JSON.stringify({ error: "Room not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+      return json({ error: "Room not found" }, 404);
     }
 
-    return new Response(JSON.stringify(stats), {
-      headers: { "Content-Type": "application/json" },
-    });
+    return json(stats);
   }
 
   // WebSocket endpoint
@@ -76,25 +68,9 @@ export async function handleRequest(request: Request): Promise<Response> {
       return response;
     } catch (error) {
       console.error("WebSocket upgrade failed:", error);
-      return new Response(
-        JSON.stringify({ error: "WebSocket upgrade failed" }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
+      return json({ error: "WebSocket upgrade failed" }, 500);
     }
   }
 
-  // 404 Not Found
-  return new Response(
-    JSON.stringify({
-      error: "Not found",
-      path: pathname,
-    }),
-    {
-      status: 404,
-      headers: { "Content-Type": "application/json" },
-    },
-  );
+  return json({ error: "Not found", path: pathname }, 404);
 }
